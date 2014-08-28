@@ -30,17 +30,24 @@ class WebAPI
 
   # private
   def _make_path(resource)
-    if @url.path[-1] == "/" and resource[0] == "/"
-      @url.path + resource[1, resource.size]  # remove duplicated "/"
+    if @url.scheme == "http" and @opts[:proxy]
+      path = @url.scheme + "://" + @url.authority + "/"
     else
-      @url.path + resource
+      path = ""
     end
+
+    if @url.path[-1] == "/" and resource[0] == "/"
+      path += @url.path + resource[1, resource.size]  # remove duplicated "/"
+    else
+      path += @url.path + resource
+    end
+
+    path
   end
 
   # private
   def _make_request method, resource, body=""
     path = _make_path(resource)
-
     req = "#{method} #{path} HTTP/1.1" + CRLF
 
     h = {
@@ -64,29 +71,40 @@ class WebAPI
 
   # private
   def _send_request req
-    tlsopts = { :port => @url.port }
-    tlsopts[:certs] = @opts[:certs]
-    tlsopts[:identity] = @url.host
+    sock = text = nil
 
-    if @opts[:proxy]
-      proxy = URL.new @opts[:proxy]
-      sock = TCPSocket.open proxy.host, proxy.port
-      sock.write "CONNECT #{@url.host}:#{@url.port} HTTP/1.1" + CRLF
-      sock.write "Host: #{@url.host}:#{@url.port}" + CRLF
-      sock.write CRLF
-      sock.flush
-
-      resp = ""
-      resp += sock.recv(100) until resp.include? CRLF+CRLF
-
-      tls = TLS.new sock, tlsopts
+    if @url.scheme == "http"
+      if @opts[:proxy]
+        proxy = URL.new @opts[:proxy]
+        sock = TCPSocket.open proxy.host, proxy.port
+      else
+        sock = TCPSocket.open @url.host, @url.port
+      end
     else
-      tls = TLS.new @url.host, tlsopts
+      tlsopts = { :port => @url.port }
+      tlsopts[:certs] = @opts[:certs]
+      tlsopts[:identity] = @url.host
+
+      if @opts[:proxy]
+        proxy = URL.new @opts[:proxy]
+        sock = TCPSocket.open proxy.host, proxy.port
+        sock.write "CONNECT #{@url.host}:#{@url.port} HTTP/1.1" + CRLF
+        sock.write "Host: #{@url.host}:#{@url.port}" + CRLF
+        sock.write CRLF
+        sock.flush
+
+        resp = ""
+        resp += sock.recv(100) until resp.include? CRLF+CRLF
+
+        tls = TLS.new sock, tlsopts
+      else
+        tls = TLS.new @url.host, tlsopts
+      end
     end
 
-    tls.write req
-    text = tls.read
-    tls.close
+    sock.write req
+    text = sock.read
+    sock.close
     text
   end
 
@@ -176,16 +194,18 @@ class WebAPI
   class URL
     @@defaultports = { "http" => 80, "https" => 443 }
 
-    attr_reader :scheme, :host, :port, :path
+    attr_reader :scheme, :authority, :host, :port, :path
 
     def initialize(str)
-      @scheme, str = str.split("://", 2)
-      authority, path = str.split("/", 2)
+      scheme, str = str.split("://", 2)
+      @scheme = scheme.downcase
+
+      @authority, path = str.split("/", 2)
 
       # userinfo is not supported
       #userinfo, host = authority.split("@", 2)
 
-      @host, @port = authority.split(":", 2)
+      @host, @port = @authority.split(":", 2)
       unless @port
         # default port number is defined for each scheme
         @port = @@defaultports[@scheme]
@@ -197,7 +217,7 @@ class WebAPI
         userinfo = nil
       end
       
-      if authority.include? "@"
+      if @authority.include? "@"
       else
         @userinfo = nil
       end
