@@ -186,6 +186,10 @@ class WebAPI
       end
     end
 
+    def inspect
+      "#<WebAPI::Response #{@code} #{@message}>"
+    end
+
     def to_s
       @str
     end
