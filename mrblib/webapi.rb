@@ -53,7 +53,7 @@ class WebAPI
     h = {
       "Host" => @url.host + ":" + @url.port.to_s,
       "Connection" => "close",
-      "User-Agent" => "mruby-weapi",
+      "User-Agent" => "mruby-webapi",
     }
 
     if body != ""
