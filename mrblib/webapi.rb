@@ -99,6 +99,7 @@ class WebAPI
         tls = TLS.new sock, tlsopts
       else
         tls = TLS.new @url.host, tlsopts
+        sock = tls
       end
     end
 
