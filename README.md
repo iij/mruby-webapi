@@ -14,6 +14,9 @@
        - "Content-Type" of the request body (if any)
      - :headers => Hash
        - arbitrary header fields.
+     - :ignore_certificate_validity => boolean
+       - ignore "Not Before" and "Not After" fields of certificates
+       - see https://github.com/iij/mruby-tls-openssl
      - :proxy => str
        - URL of HTTPS proxy
  - WebAPI#get resource
