@@ -2,6 +2,9 @@ class WebAPI
   CRLF = "\r\n"
   FORMCHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._~"
 
+  MAXHEADERBYTES = 65536
+  MAXHEADERCOUNT = 64
+
   def initialize(url, opts={})
     @url = URL.new(url)
     @opts = opts.dup
@@ -170,7 +173,7 @@ class WebAPI
     attr_reader :http_version
     attr_reader :code
     attr_reader :message
-    attr_reader :content_type
+    attr_reader :headers
     attr_reader :body
 
     def initialize(text)
@@ -181,11 +184,70 @@ class WebAPI
 
       i = (str || "").index(CRLF + CRLF)
       if i 
-        i += (CRLF+CRLF).size
+        raise ResponseError, "header is too long (#{i} > #{MAXHEADERBYTES}:max)" if i > MAXHEADERBYTES
+        i += CRLF.size
+        header_text = str[0, i]     # with a CRLF for last header line
+        i += CRLF.size
         @body = str[i, text.size]
       else
+        header_text = str
         @body = ""
       end
+
+      self._parse_header header_text
+      case (@headers["transfer-encoding"] || "").downcase
+      when ""
+        # nothing to do
+      when "chunked"
+        self._join_chunks
+      else
+        raise ResponseError, "unsupported Transfer-Encoding: #{@headers["transfer-encoding"]}"
+      end
+    end
+
+    def _join_chunks
+      raw = @body
+      joined = ""
+      while true
+        chunk_line, chunk_data = raw.split(CRLF, 2)
+        raise ResponseError, "broken chunk" unless chunk_data
+
+        chunk_size, chunk_ext = chunk_line.split(";", 2)
+        len = chunk_size.to_i(16)
+        break if len == 0
+
+        joined += chunk_data[0, len]
+
+        raise ResponseError, "broken chunk" if chunk_data[len, 2] != CRLF
+        raw = chunk_data[len+2..-1]
+      end
+      @body = joined
+    end
+
+    def _parse_header text
+      def strip_ows str
+        a = 0
+        z = str.size - 1
+        a += 1 while " \t".include?(str[a]) and a <= z
+        z -= 1 while " \t".include?(str[z]) and a <= z
+        (z >= 0) ? str[a..z] : ""
+      end
+
+      @headers = {}
+      headerlist = text.split(CRLF)
+      raise ResponseError, "too many header fields (#{headerlist.size} > #{MAXHEADERCOUNT}:max)" if headerlist.size > MAXHEADERCOUNT
+
+      headerlist.each { |line|
+        name, value = line.split(':', 2)
+        raise ResponseError, "invalid header line not including \":\": #{line}" unless value
+
+        name  = name.downcase
+        value = strip_ows(value)
+        if @headers.has_key? name and name != "set-cookie"
+          raise ResponseError, "duplicated header-fields: #{name}"
+        end
+        @headers[name] = value
+      }
     end
 
     def inspect
