@@ -243,10 +243,14 @@ class WebAPI
 
         name  = name.downcase
         value = strip_ows(value)
-        if @headers.has_key? name and name != "set-cookie"
-          raise ResponseError, "duplicated header-fields: #{name}"
+        if name == "set-cookie"
+          @headers["set-cookie"] ||= []
+          @headers["set-cookie"] << value
+        elsif @headers.has_key? name
+          @headers[name] += "," + name
+        else
+          @headers[name] = value
         end
-        @headers[name] = value
       }
     end
 
