@@ -64,7 +64,7 @@ class WebAPI
       h["Content-Length"] = body.size.to_s
     end
 
-    h.update @opts[:headers] if @opts[:headers]
+    h.merge! @opts[:headers] if @opts[:headers]
     h.each { |key, val|
       req += key + ": " + val + CRLF
     }
