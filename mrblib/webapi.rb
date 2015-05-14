@@ -270,10 +270,11 @@ class WebAPI
     attr_reader :scheme, :authority, :host, :port, :path
 
     def initialize(str)
-      scheme, str = str.split("://", 2)
+      scheme, tail = str.split("://", 2)
+      raise InvalidURIError, "invalid URL: #{str}" unless tail
       @scheme = scheme.downcase
 
-      @authority, path = str.split("/", 2)
+      @authority, path = tail.split("/", 2)
 
       # userinfo is not supported
       #userinfo, host = authority.split("@", 2)
