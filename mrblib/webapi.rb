@@ -88,6 +88,7 @@ class WebAPI
       tlsopts[:certs] = @opts[:certs]
       tlsopts[:identity] = @url.host
       tlsopts[:ignore_certificate_validity] = @opts[:ignore_certificate_validity]
+      tlsopts[:sni] = true
 
       if @opts[:proxy]
         proxy = URL.new @opts[:proxy]
