@@ -37,3 +37,14 @@ assert('WebAPI::Response response with Content-Encoding') do
   r = WebAPI::Response.new text
   assert_equal "mruby-webapi", r.body
 end
+
+assert('WebAPI::Response broken response with Content-Encoding') do
+  text =  "HTTP/1.1 200 OK\r\n"
+  text += "Content-Encoding: gzip\r\n"
+  text += "\r\n"
+  text += "It is not a gzip\r\n"
+  text += "\r\n"
+  assert_raise(WebAPI::ResponseError) do
+    WebAPI::Response.new text
+  end
+end

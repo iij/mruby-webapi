@@ -219,7 +219,11 @@ class WebAPI
       when ""
         # nothing to do
       when "gzip", "deflate"
-        @body = Zlib.inflate @body
+        begin
+          @body = Zlib.inflate @body
+        rescue RuntimeError => e
+          raise ResponseError, "broken #{@headers["content-encoding"]} response (#{e})"
+        end
       else
         # passthrough
       end
