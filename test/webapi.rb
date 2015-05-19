@@ -27,3 +27,13 @@ assert('WebAPI::Response#_join_chunks') do
   r = WebAPI::Response.new text
   assert_equal "mruby-webapi", r.body
 end
+
+assert('WebAPI::Response response with Content-Encoding') do
+  text =  "HTTP/1.1 200 OK\r\n"
+  text += "Content-Encoding: gzip\r\n"
+  text += "\r\n"
+  text += "#{Zlib.gzip("mruby-webapi")}\r\n"
+  text += "\r\n"
+  r = WebAPI::Response.new text
+  assert_equal "mruby-webapi", r.body
+end
