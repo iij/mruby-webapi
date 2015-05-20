@@ -61,8 +61,18 @@ class WebAPI
 
     if body != ""
       h["Content-Type"] = @opts[:content_type] if @opts[:content_type]
+      h["Content-Encoding"] = @opts[:content_encoding] if @opts[:content_encoding]
+      if @opts[:content_encoding] == "gzip"
+        body = Zlib.gzip body
+      elsif @opts[:content_encoding] == "deflate"
+        body = Zlib.deflate body
+      else
+        # body = body
+      end
       h["Content-Length"] = body.size.to_s
     end
+
+    h["Accept-Encoding"] = @opts[:accept_encoding] if @opts[:accept_encoding]
 
     h.merge! @opts[:headers] if @opts[:headers]
     h.each { |key, val|
@@ -203,6 +213,19 @@ class WebAPI
         self._join_chunks
       else
         raise ResponseError, "unsupported Transfer-Encoding: #{@headers["transfer-encoding"]}"
+      end
+
+      case (@headers["content-encoding"] || "").downcase
+      when ""
+        # nothing to do
+      when "gzip", "deflate"
+        begin
+          @body = Zlib.inflate @body
+        rescue RuntimeError => e
+          raise ResponseError, "broken #{@headers["content-encoding"]} response (#{e})"
+        end
+      else
+        # passthrough
       end
     end
 
