@@ -8,12 +8,12 @@
  - WebAPI.new url, opts={}
    - Make an WebAPI object to be used to call APIs whose base url is `url`
    - Supported keys in `opts`:
-     - :accept_encoding => str
+     - :accept_encoding => str (mruby-zlib is required)
        - acceptable response encoding
          (supported type: "gzip" or "deflate")
      - :certs => str
        - pathname of the file contains trusted root CA certificate(s)
-     - :content_encoding => str
+     - :content_encoding => str (mruby-zlib is required)
        - type of request body encoding
          (supported type: "gzip" or "deflate")
      - :content_type => str

@@ -8,6 +8,11 @@ class WebAPI
   def initialize(url, opts={})
     @url = URL.new(url)
     @opts = opts.dup
+    unless Object.const_defined? :Zlib
+      if @opts[:content_encoding] or @opts[:accept_encoding]
+        raise UnSupportedOptionError, "mruby-zlib is required"
+     end
+    end
   end
 
   def get resource
@@ -61,18 +66,22 @@ class WebAPI
 
     if body != ""
       h["Content-Type"] = @opts[:content_type] if @opts[:content_type]
-      h["Content-Encoding"] = @opts[:content_encoding] if @opts[:content_encoding]
-      if @opts[:content_encoding] == "gzip"
-        body = Zlib.gzip body
-      elsif @opts[:content_encoding] == "deflate"
-        body = Zlib.deflate body
-      else
-        # body = body
+      if Object.const_defined? :Zlib
+        h["Content-Encoding"] = @opts[:content_encoding] if @opts[:content_encoding]
+        if @opts[:content_encoding] == "gzip"
+          body = Zlib.gzip body
+        elsif @opts[:content_encoding] == "deflate"
+          body = Zlib.deflate body
+        else
+          # body = body
+        end
       end
       h["Content-Length"] = body.size.to_s
     end
 
-    h["Accept-Encoding"] = @opts[:accept_encoding] if @opts[:accept_encoding]
+    if Object.const_defined? :Zlib
+      h["Accept-Encoding"] = @opts[:accept_encoding] if @opts[:accept_encoding]
+    end
 
     h.merge! @opts[:headers] if @opts[:headers]
     h.each { |key, val|
@@ -215,14 +224,18 @@ class WebAPI
         raise ResponseError, "unsupported Transfer-Encoding: #{@headers["transfer-encoding"]}"
       end
 
-      case (@headers["content-encoding"] || "").downcase
-      when ""
-        # nothing to do
-      when "gzip", "deflate"
-        begin
-          @body = Zlib.inflate @body
-        rescue RuntimeError => e
-          raise ResponseError, "broken #{@headers["content-encoding"]} response (#{e})"
+      if Object.const_defined? :Zlib
+        case (@headers["content-encoding"] || "").downcase
+        when ""
+          # nothing to do
+        when "gzip", "deflate"
+          begin
+            @body = Zlib.inflate @body
+          rescue RuntimeError => e
+            raise ResponseError, "broken #{@headers["content-encoding"]} response (#{e})"
+          end
+        else
+          # passthrough
         end
       else
         # passthrough
@@ -331,4 +344,5 @@ class WebAPI
   class Error < StandardError; end
   class InvalidURIError < Error; end
   class ResponseError < Error; end
+  class UnSupportedOptionError < Error; end
 end
