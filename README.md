@@ -25,6 +25,10 @@
          (see https://github.com/iij/mruby-tls-openssl)
      - :proxy => str
        - URL of HTTPS proxy
+     - :sni => false (default) | true | String
+       - use Server Name Indication (SNI)
+         (see https://github.com/iij/mruby-tls-openssl)
+
  - WebAPI#get resource
  - WebAPI#post resource, data
  - WebAPI.urlencode pairs
