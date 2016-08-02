@@ -62,12 +62,15 @@ class WebAPI
     path = _make_path(resource)
     req = "#{method} #{path} HTTP/1.1" + CRLF
 
-    h = {
-      "Host" => @url.host + ":" + @url.port.to_s,
-      "Connection" => "close",
-      "User-Agent" => "mruby-webapi",
-    }
-
+    h = {}
+    h["Connection"] = "close"
+    h["User-Agent"] = "mruby-webapi"
+    if @url.scheme == "unix"
+      h["Host"] = "http"
+    else
+      h["Host"] = "#{@url.host}:#{@url.port.to_s}"
+    end
+    
     if body != ""
       h["Content-Type"] = @opts[:content_type] if @opts[:content_type]
       if Object.const_defined? :Zlib
