@@ -310,33 +310,37 @@ class WebAPI
       raise InvalidURIError, "invalid URL: #{str}" unless tail
       @scheme = scheme.downcase
 
-      @authority, path = tail.split("/", 2)
-
-      # userinfo is not supported
-      #userinfo, host = authority.split("@", 2)
-
-      @host, @port = @authority.split(":", 2)
-      unless @port
-        # default port number is defined for each scheme
-        @port = @@defaultports[@scheme]
-        raise InvalidURIError, "port must be specified" unless @port
-      end
-
-      unless host
-        host = userinfo
-        userinfo = nil
-      end
-      
-      if @authority.include? "@"
+      if @scheme == "unix"
+        @path = tail
       else
-        @userinfo = nil
-      end
+        @authority, path = tail.split("/", 2)
 
-      # path == nil : without leading /
-      if path == nil
-        @path = ""
-      else
-        @path = "/" + path
+        # userinfo is not supported
+        #userinfo, host = authority.split("@", 2)
+
+        @host, @port = @authority.split(":", 2)
+        unless @port
+          # default port number is defined for each scheme
+          @port = @@defaultports[@scheme]
+          raise InvalidURIError, "port must be specified" unless @port
+        end
+
+        unless host
+          host = userinfo
+          userinfo = nil
+        end
+        
+        if @authority.include? "@"
+        else
+          @userinfo = nil
+        end
+
+        # path == nil : without leading /
+        if path == nil
+          @path = ""
+        else
+          @path = "/" + path
+        end
       end
     end
   end
