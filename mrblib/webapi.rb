@@ -102,6 +102,8 @@ class WebAPI
       else
         sock = TCPSocket.open @url.host, @url.port
       end
+    elsif @url.scheme == "unix"
+      sock = UNIXSocket.open (@url.path)
     else
       tlsopts = { :port => @url.port }
       tlsopts[:certs] = @opts[:certs]
