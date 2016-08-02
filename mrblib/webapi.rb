@@ -44,10 +44,14 @@ class WebAPI
       path = ""
     end
 
+    unless @url.scheme == "unix"
+      path += @url.path
+    end
+
     if @url.path[-1] == "/" and resource[0] == "/"
-      path += @url.path + resource[1, resource.size]  # remove duplicated "/"
+      path += resource[1, resource.size]  # remove duplicated "/"
     else
-      path += @url.path + resource
+      path += resource
     end
 
     path
