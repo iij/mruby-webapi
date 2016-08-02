@@ -36,6 +36,39 @@ class WebAPI
     _make_request "POST", resource, body
   end
 
+  def put resource, body
+    req = put_str resource, body
+    response_str = _send_request req
+    Response.new(response_str)
+  end
+
+  def put_str resource, body
+    body = WebAPI.urlencode(body) if body.is_a? Hash
+    _make_request "PUT", resource, body
+  end
+
+  def patch resource, body
+    req = put_str resource, body
+    response_str = _send_request req
+    Response.new(response_str)
+  end
+
+  def patch_str resource, body
+    body = WebAPI.urlencode(body) if body.is_a? Hash
+    _make_request "PATCH", resource, body
+  end
+
+  def delete resource, body
+    req = delete_str resource, body
+    response_str = _send_request req
+    Response.new(response_str)
+  end
+
+  def delete_str resource, body
+    body = WebAPI.urlencode(body) if body.is_a? Hash
+    _make_request "DELETE", resource, body
+  end
+
   # private
   def _make_path(resource)
     if @url.scheme == "http" and @opts[:proxy]
@@ -70,7 +103,7 @@ class WebAPI
     else
       h["Host"] = "#{@url.host}:#{@url.port.to_s}"
     end
-    
+
     if body != ""
       h["Content-Type"] = @opts[:content_type] if @opts[:content_type]
       if Object.const_defined? :Zlib
