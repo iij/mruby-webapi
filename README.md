@@ -65,8 +65,9 @@ puts html
 ```
 * Request Message (for debug):
 POST /markdown HTTP/1.1
-Host: gh.iiji.jp:443
+Host: api.github.com:443
 Connection: close
+User-Agent: mruby-webapi
 Content-Type: application/json
 Content-Length: 97
 X-AnyHeader: Some Text
