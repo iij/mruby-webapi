@@ -36,6 +36,39 @@ class WebAPI
     _make_request "POST", resource, body
   end
 
+  def put resource, body
+    req = put_str resource, body
+    response_str = _send_request req
+    Response.new(response_str)
+  end
+
+  def put_str resource, body
+    body = WebAPI.urlencode(body) if body.is_a? Hash
+    _make_request "PUT", resource, body
+  end
+
+  def patch resource, body
+    req = put_str resource, body
+    response_str = _send_request req
+    Response.new(response_str)
+  end
+
+  def patch_str resource, body
+    body = WebAPI.urlencode(body) if body.is_a? Hash
+    _make_request "PATCH", resource, body
+  end
+
+  def delete resource, body
+    req = delete_str resource, body
+    response_str = _send_request req
+    Response.new(response_str)
+  end
+
+  def delete_str resource, body
+    body = WebAPI.urlencode(body) if body.is_a? Hash
+    _make_request "DELETE", resource, body
+  end
+
   # private
   def _make_path(resource)
     if @url.scheme == "http" and @opts[:proxy]
@@ -44,10 +77,14 @@ class WebAPI
       path = ""
     end
 
+    unless @url.scheme == "unix"
+      path += @url.path
+    end
+
     if @url.path[-1] == "/" and resource[0] == "/"
-      path += @url.path + resource[1, resource.size]  # remove duplicated "/"
+      path += resource[1, resource.size]  # remove duplicated "/"
     else
-      path += @url.path + resource
+      path += resource
     end
 
     path
@@ -58,11 +95,14 @@ class WebAPI
     path = _make_path(resource)
     req = "#{method} #{path} HTTP/1.1" + CRLF
 
-    h = {
-      "Host" => @url.host + ":" + @url.port.to_s,
-      "Connection" => "close",
-      "User-Agent" => "mruby-webapi",
-    }
+    h = {}
+    h["Connection"] = "close"
+    h["User-Agent"] = "mruby-webapi"
+    if @url.scheme == "unix"
+      h["Host"] = "http"
+    else
+      h["Host"] = "#{@url.host}:#{@url.port.to_s}"
+    end
 
     if body != ""
       h["Content-Type"] = @opts[:content_type] if @opts[:content_type]
@@ -102,6 +142,8 @@ class WebAPI
       else
         sock = TCPSocket.open @url.host, @url.port
       end
+    elsif @url.scheme == "unix"
+      sock = UNIXSocket.open (@url.path)
     else
       tlsopts = { :port => @url.port }
       tlsopts[:certs] = @opts[:certs]
@@ -310,33 +352,37 @@ class WebAPI
       raise InvalidURIError, "invalid URL: #{str}" unless tail
       @scheme = scheme.downcase
 
-      @authority, path = tail.split("/", 2)
-
-      # userinfo is not supported
-      #userinfo, host = authority.split("@", 2)
-
-      @host, @port = @authority.split(":", 2)
-      unless @port
-        # default port number is defined for each scheme
-        @port = @@defaultports[@scheme]
-        raise InvalidURIError, "port must be specified" unless @port
-      end
-
-      unless host
-        host = userinfo
-        userinfo = nil
-      end
-      
-      if @authority.include? "@"
+      if @scheme == "unix"
+        @path = tail
       else
-        @userinfo = nil
-      end
+        @authority, path = tail.split("/", 2)
 
-      # path == nil : without leading /
-      if path == nil
-        @path = ""
-      else
-        @path = "/" + path
+        # userinfo is not supported
+        #userinfo, host = authority.split("@", 2)
+
+        @host, @port = @authority.split(":", 2)
+        unless @port
+          # default port number is defined for each scheme
+          @port = @@defaultports[@scheme]
+          raise InvalidURIError, "port must be specified" unless @port
+        end
+
+        unless host
+          host = userinfo
+          userinfo = nil
+        end
+        
+        if @authority.include? "@"
+        else
+          @userinfo = nil
+        end
+
+        # path == nil : without leading /
+        if path == nil
+          @path = ""
+        else
+          @path = "/" + path
+        end
       end
     end
   end
